@@ -66,6 +66,13 @@
     gap: 8px;
 }
 
+.myurls-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .myurls-delete-btn {
     background: none;
     border: none;
@@ -143,6 +150,17 @@
 .myurls-btn-group {
     display: flex;
     gap: 8px;
+    align-items: center;
+}
+
+.myurls-clicks {
+    color: #999;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    white-space: nowrap;
 }
 
 .myurls-qr-container {

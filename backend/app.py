@@ -10,6 +10,7 @@ from user_auth import create_user, get_user_by_email, hash_password, check_passw
 
 app = Flask(__name__, static_folder='../url-short/dist', static_url_path='')
 app.secret_key = os.urandom(24)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 
 DB_PATH = 'db/urls.db'
@@ -68,6 +69,13 @@ def get_shortcode_for_url(url):
 def get_url_by_shortcode(shortcode):
     result = execute_query("SELECT original_url FROM urls WHERE short_code = ?", (shortcode,))
     return result['original_url'] if result else None
+
+
+def increment_click_count(shortcode):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE urls SET click_count = click_count + 1 WHERE short_code = ?", (shortcode,))
+    conn.commit()
     
 
 
@@ -76,15 +84,15 @@ def create_short_url(shortcode):
 
 
 def is_valid_url(url):
-    user_agent = {'User-Agent': 'Mozilla/5.0'}
+    user_agent = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     try:
-        response = requests.get(url, timeout=5, headers=user_agent)
-        return response.status_code == 200
+        response = requests.get(url, timeout=5, headers=user_agent, allow_redirects=True)
+        return response.status_code < 500
     except requests.exceptions.RequestException:
         return False
-    
+
 
 def get_logged_in_user():
     email = session.get('email')
@@ -173,7 +181,10 @@ def shorten_url():
     existing_shortcode = get_shortcode_for_url(original_url)
 
     if existing_shortcode:
-        short_url = create_short_url(existing_shortcode)
+        if user:
+            short_url = f"{request.host_url}{user[0]}/{existing_shortcode}"
+        else:
+            short_url = create_short_url(existing_shortcode)
         qr_code = generate_qr_code(short_url)
         print(f"Short URL: {short_url}")
         response = jsonify({"short_url": short_url, "qr_code": qr_code})
@@ -186,7 +197,10 @@ def shorten_url():
             break
 
     save_url(original_url, shortcode, user[0] if user else None)
-    short_url = create_short_url(shortcode)
+    if user:
+        short_url = f"{request.host_url}{user[0]}/{shortcode}"
+    else:
+        short_url = create_short_url(shortcode)
     qr_code = generate_qr_code(short_url)
     print(f"Short URL: {short_url}")
     response = jsonify({"short_url": short_url, "qr_code": qr_code})
@@ -201,6 +215,16 @@ def serve_assets(filename):
     return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
 
+
+
+@app.route('/<int:user_id>/<shortcode>', methods=['GET'])
+def handle_user_redirect(user_id, shortcode):
+    original_url = get_url_by_shortcode(shortcode)
+    if original_url:
+        increment_click_count(shortcode)
+        return redirect(original_url)
+    else:
+        return jsonify({"error": "Shortcode not found"}), 404
 
 
 @app.route('/<shortcode>', methods=['GET'])
@@ -227,16 +251,15 @@ def my_urls():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT urls.original_url, urls.short_code 
+        SELECT urls.original_url, urls.short_code, urls.click_count 
         FROM urls 
         JOIN user_urls ON urls.id = user_urls.url_id 
         WHERE user_urls.user_id = ?
     """, (user[0],))
     urls = cursor.fetchall()
-    conn.close()
 
-    url_list = [{"original_url": row["original_url"], "short_code": row["short_code"]} for row in urls]
-    return jsonify(url_list), 200
+    url_list = [{"original_url": row["original_url"], "short_code": row["short_code"], "click_count": row["click_count"]} for row in urls]
+    return jsonify({"user_id": user[0], "urls": url_list}), 200
 
 
 
@@ -270,7 +293,6 @@ def delete_url(shortcode):
     
     url_record = cursor.fetchone()
     if not url_record:
-        conn.close()
         return jsonify({"error": "URL not found or not owned by user"}), 404
     
 
@@ -279,7 +301,6 @@ def delete_url(shortcode):
     cursor.execute("DELETE FROM urls WHERE id = ?", (url_id,))
     
     conn.commit()
-    conn.close()
     
     return jsonify({"message": "URL deleted successfully"}), 200
 

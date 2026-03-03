@@ -8,40 +8,46 @@ function MyUrls() {
     const [notLoggedIn, setNotLoggedIn] = useState(false);
     const [visibleQr, setVisibleQr] = useState(null);
     const [qrData, setQrData] = useState({});
+    const [userId, setUserId] = useState(null);
+
+    const fetchUrls = async () => {
+        try {
+            const response = await fetch("/my-urls", {
+                credentials: "include",
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUserId(data.user_id);
+                setUrls(data.urls);
+            } else if (response.status === 401) {
+                setNotLoggedIn(true);
+            } else {
+                setError("Failed to load URLs");
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            setError("Could not load your URLs");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchUrls = async () => {
-            try {
-                const response = await fetch("/my-urls", {
-                    credentials: "include",
-                });
-
-                console.log("Response status:", response.status); // Debug 
-                console.log("Response ok:", response.ok); // Debug
-
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log("Fetched URLs:", data); // Debug
-                    setUrls(data);
-                } else if (response.status === 401) {
-                    console.log("User not authenticated"); // Debug
-                    setNotLoggedIn(true);
-                } else {
-                    setError("Failed to load URLs");
-                }
-            } catch (err) {
-                console.error("Error:", err);
-                setError("Could not load your URLs");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUrls();
+        const interval = setInterval(fetchUrls, 5000);
+        return () => clearInterval(interval);
     }, []);
 
+    const getShortUrl = (shortCode) => {
+        const base = window.location.origin;
+        return userId
+            ? `${base}/${userId}/${shortCode}`
+            : `${base}/${shortCode}`;
+    };
+
     const handleCopy = (shortCode) => {
-        navigator.clipboard.writeText(`http://127.0.0.1:5001/${shortCode}`);
+        navigator.clipboard.writeText(getShortUrl(shortCode));
     };
 
     const handleShowQr = async (shortCode) => {
@@ -141,17 +147,22 @@ function MyUrls() {
                                     ×
                                 </button>
                                 <div className="myurls-content">
-                                    <div className="myurls-original" title={item.original_url}>
-                                        {item.original_url}
+                                    <div className="myurls-top">
+                                        <div className="myurls-original" title={item.original_url}>
+                                            {item.original_url}
+                                        </div>
+                                        <span className="myurls-clicks" title="Click count">
+                                            🔭 {item.click_count}
+                                        </span>
                                     </div>
                                     <div className="myurls-bottom">
                                         <a
                                             className="myurls-short"
-                                            href={`http://127.0.0.1:5001/${item.short_code}`}
+                                            href={getShortUrl(item.short_code)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
-                                            {`http://127.0.0.1:5001/${item.short_code}`}
+                                            {getShortUrl(item.short_code)}
                                         </a>
                                         <div className="myurls-btn-group">
                                             <button
