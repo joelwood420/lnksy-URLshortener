@@ -46,7 +46,6 @@ def make_thread_conn(db_path):
 
 
 # Test 1 – Concurrent shortcode inserts never produce a duplicate short_code
-#
 # Simulates the race condition: N threads all try to shorten a *different* URL
 # at the same time. Each must end up with a unique shortcode in the DB.
 
@@ -95,7 +94,6 @@ def test_concurrent_shorten_unique_shortcodes():
 
 
 # Test 2 – Concurrent click-count increments are not lost
-#
 # Simulates many redirects hitting the same shortcode simultaneously.
 # The final click_count must equal the number of threads that incremented it.
 
@@ -143,7 +141,6 @@ def test_concurrent_click_count_increments():
 
 
 # Test 3 – WAL mode and busy_timeout are configured on every new connection
-#
 # Verifies that get_db_connection() applies the pragmas that prevent
 # "database is locked" errors under concurrent write load.
 
