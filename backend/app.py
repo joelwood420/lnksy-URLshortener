@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import requests
 import random
 import os
+import sqlite3
 import qrcode
 import io
 import base64
@@ -46,12 +47,6 @@ def execute_query(query, params=()):
     cursor.execute(query, params)
     result = cursor.fetchone() 
     return result
-
-
-def is_shortcode_unique(generated_shortcode):
-    result = execute_query("SELECT 1 FROM urls WHERE short_code = ?", (generated_shortcode,))
-    return result is None
-
 
 
 def save_url(url, shortcode, user_id=None, title=None):
@@ -311,13 +306,14 @@ def shorten_url():
             qr_code = generate_qr_code(short_url)
             return jsonify({"short_url": short_url, "qr_code": qr_code}), 200
 
+    title = get_page_title(original_url)
     while True:
         shortcode = generate_shortcode()
-        if is_shortcode_unique(shortcode):
+        try:
+            save_url(original_url, shortcode, user[0] if user else None, title)
             break
-
-    title = get_page_title(original_url)
-    save_url(original_url, shortcode, user[0] if user else None, title)
+        except sqlite3.IntegrityError:
+            continue
     if user:
         short_url = f"{request.host_url}{user[0]}/{shortcode}"
     else:

@@ -14,9 +14,8 @@ def test_generate_shortcode():
 
 def test_existing_shortcode(test_db):
     app.execute_query("INSERT INTO urls (original_url, short_code) VALUES (?, ?)", ("http://example.com", "abc"))
-    generated_shortcode = 'abc'
-    result = app.is_shortcode_unique(generated_shortcode)
-    assert result == False
+    result = app.execute_query("SELECT 1 FROM urls WHERE short_code = ?", ("abc",))
+    assert result is not None
 
 
 
