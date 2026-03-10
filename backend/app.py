@@ -170,28 +170,21 @@ def is_safe_browsing_url(url):
         return True  
 
 
-def is_valid_url(url):
+def validate_url_and_get_title(url):
     if not is_safe_url(url):
-        return False
+        return False, None
     if not is_safe_browsing_url(url):
-        return False
+        return False, None
     try:
-        response = requests.get(url, timeout=5, headers=USER_AGENT, allow_redirects=True)
-        return response.status_code < 500
-    except requests.exceptions.RequestException:
-        return False
-
-
-def get_page_title(url):
-    try:
-        response = requests.get(url, timeout=5, headers=USER_AGENT)
-        if response.status_code != 200:
-            return None
+        response = requests.get(url, timeout=3, headers=USER_AGENT, allow_redirects=True)
+        if response.status_code >= 500:
+            return False, None
         soup = BeautifulSoup(response.text, 'html.parser')
         title_tag = soup.find('title')
-        return title_tag.string.strip() if title_tag and title_tag.string else None
-    except Exception:
-        return None
+        title = title_tag.string.strip() if title_tag and title_tag.string else None
+        return True, title
+    except requests.exceptions.RequestException:
+        return False, None
 
 
 def get_logged_in_user():
@@ -284,7 +277,8 @@ def shorten_url():
     if not original_url.startswith(('http://', 'https://')):
         original_url = 'https://' + original_url
 
-    if not is_valid_url(original_url):
+    valid, title = validate_url_and_get_title(original_url)
+    if not valid:
         return jsonify({"error": "Please input a valid URL"}), 400
 
     user = get_logged_in_user()
@@ -301,8 +295,6 @@ def shorten_url():
             short_url = create_short_url(existing_shortcode)
             qr_code = generate_qr_code(short_url)
             return jsonify({"short_url": short_url, "qr_code": qr_code}), 200
-
-    title = get_page_title(original_url)
     while True:
         shortcode = generate_shortcode()
         try:

@@ -30,8 +30,6 @@ function MyUrls() {
 
     useEffect(() => {
         fetchUrls();
-        const interval = setInterval(fetchUrls, 5000);
-        return () => clearInterval(interval);
     }, []);
 
     const getShortUrl = (shortCode) => {
