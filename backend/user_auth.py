@@ -1,19 +1,5 @@
 import bcrypt
-import os
-
-from db import get_db_connection
-
-
-def execute_query(query, params=(), fetchone=False, commit=False):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    result = None
-    if fetchone:
-        result = cursor.fetchone()
-    if commit:
-        conn.commit()
-    return result
+from db import execute_query
 
 
 def create_user(email, password_hash):

@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, jsonify, send_from_directory, session, g
+from flask import Flask, redirect, request, jsonify, send_from_directory, session
 from dotenv import load_dotenv
 import requests
 import random
@@ -11,7 +11,7 @@ import ipaddress
 from urllib.parse import urlparse
 import socket
 from bs4 import BeautifulSoup
-from db import get_db_connection, initialize_db, close_db, DB_PATH
+from db import get_db_connection, initialize_db, close_db, DB_PATH, execute_query
 from user_auth import create_user, get_user_by_email, hash_password, check_password
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,19 +41,6 @@ SHORTCODE_LENGTH = 3
 def generate_shortcode():
         return "".join(random.choice(CHARS) for _ in range(SHORTCODE_LENGTH))
     
-def execute_query(query, params=(), commit=False, fetchone=True, fetchall=False):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    if commit:
-        conn.commit()
-    if fetchall:
-        return cursor.fetchall()
-    if fetchone:
-        return cursor.fetchone()
-    return cursor
-
-
 def save_url(url, shortcode, user_id=None, title=None):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -147,7 +134,6 @@ SAFE_BROWSING_THREAT_TYPES = [
 ]
 
 def is_safe_browsing_url(url):
-    """Return False if Google Safe Browsing flags the URL as a known threat."""
     if not GOOGLE_SAFE_BROWSING_API_KEY:
         return True  
     try:

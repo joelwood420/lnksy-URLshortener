@@ -28,3 +28,16 @@ def close_db(exception=None):
     db = g.pop('db', None)
     if db is not None:
         db.close()
+
+
+def execute_query(query, params=(), commit=False, fetchone=True, fetchall=False):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(query, params)
+    if commit:
+        conn.commit()
+    if fetchall:
+        return cursor.fetchall()
+    if fetchone:
+        return cursor.fetchone()
+    return cursor
