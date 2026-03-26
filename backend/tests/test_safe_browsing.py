@@ -5,6 +5,7 @@ import requests as req_module
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import url_validation
+from url_validation import SafeBrowsingStatus
 
 
 @pytest.fixture(autouse=True)
@@ -30,13 +31,13 @@ def _threat_body(threat_type, url):
 
 def test_no_api_key_allows_url(monkeypatch):
     monkeypatch.setattr(url_validation, "GOOGLE_SAFE_BROWSING_API_KEY", None)
-    assert url_validation.is_safe_browsing_url("https://example.com") == "unavailable"
+    assert url_validation.is_safe_browsing_url("https://example.com") == SafeBrowsingStatus.UNAVAILABLE
 
 
 
 def test_clean_url_allowed(mocker):
     mocker.patch("url_validation.requests.post", return_value=mocker.Mock(status_code=200, json=lambda: {}))
-    assert url_validation.is_safe_browsing_url("https://example.com") == "safe"
+    assert url_validation.is_safe_browsing_url("https://example.com") == SafeBrowsingStatus.SAFE
 
 
 
@@ -52,14 +53,14 @@ def test_flagged_url_blocked(mocker, threat_type, url):
         "url_validation.requests.post",
         return_value=mocker.Mock(status_code=200, json=lambda b=_threat_body(threat_type, url): b),
     )
-    assert url_validation.is_safe_browsing_url(url) == "dangerous"
+    assert url_validation.is_safe_browsing_url(url) == SafeBrowsingStatus.DANGEROUS
 
 
 
 @pytest.mark.parametrize("status_code", [400, 403, 429, 500, 503])
 def test_api_error_fails_open(mocker, status_code):
     mocker.patch("url_validation.requests.post", return_value=mocker.Mock(status_code=status_code, json=lambda: {}))
-    assert url_validation.is_safe_browsing_url("https://example.com") == "unavailable"
+    assert url_validation.is_safe_browsing_url("https://example.com") == SafeBrowsingStatus.UNAVAILABLE
 
 
 
@@ -70,7 +71,7 @@ def test_api_error_fails_open(mocker, status_code):
 ])
 def test_network_exception_fails_open(mocker, exc):
     mocker.patch("url_validation.requests.post", side_effect=exc)
-    assert url_validation.is_safe_browsing_url("https://example.com") == "unavailable"
+    assert url_validation.is_safe_browsing_url("https://example.com") == SafeBrowsingStatus.UNAVAILABLE
 
 
 

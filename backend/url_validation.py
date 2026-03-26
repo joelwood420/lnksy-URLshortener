@@ -2,6 +2,7 @@ import socket
 import ipaddress
 import requests
 import os
+from enum import Enum
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
@@ -12,6 +13,12 @@ class UrlCheckResult:
     valid: bool
     title: str | None
     error_reason: str | None 
+
+
+class SafeBrowsingStatus(Enum):
+    SAFE = "safe"
+    DANGEROUS = "dangerous"
+    UNAVAILABLE = "unavailable"
 
 GOOGLE_SAFE_BROWSING_API_KEY = os.environ.get('GOOGLE_SAFE_BROWSING_API_KEY')
 
@@ -44,7 +51,7 @@ def is_safe_url(url):
 
 def is_safe_browsing_url(url):
     if not GOOGLE_SAFE_BROWSING_API_KEY:
-        return "unavailable"
+        return SafeBrowsingStatus.UNAVAILABLE
     try:
         resp = requests.post(
             "https://safebrowsing.googleapis.com/v4/threatMatches:find",
@@ -61,10 +68,10 @@ def is_safe_browsing_url(url):
             timeout=5,
         )
         if resp.status_code != 200:
-            return "unavailable"
-        return "safe" if resp.json() == {} else "dangerous"
+            return SafeBrowsingStatus.UNAVAILABLE
+        return SafeBrowsingStatus.SAFE if resp.json() == {} else SafeBrowsingStatus.DANGEROUS
     except requests.exceptions.RequestException:
-        return "unavailable"  # API error = fail closed, block the URL
+        return SafeBrowsingStatus.UNAVAILABLE
 
 
 def validate_url_and_get_title(url):
@@ -73,9 +80,9 @@ def validate_url_and_get_title(url):
         return UrlCheckResult(valid=False, title=None, error_reason="invalid_url")
 
     safe_browsing_result = is_safe_browsing_url(url)
-    if safe_browsing_result == "dangerous":
+    if safe_browsing_result == SafeBrowsingStatus.DANGEROUS:
         return UrlCheckResult(valid=False, title=None, error_reason="dangerous")
-    if safe_browsing_result == "unavailable":
+    if safe_browsing_result == SafeBrowsingStatus.UNAVAILABLE:
         return UrlCheckResult(valid=False, title=None, error_reason="service_unavailable")
 
     try:

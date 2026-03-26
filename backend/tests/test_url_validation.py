@@ -5,6 +5,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import url_validation
+from url_validation import SafeBrowsingStatus
 
 
 
@@ -37,7 +38,7 @@ def test_validate_url_invalid_host():
 def test_validate_url_returns_title(mocker):
     """A clean URL should return valid=True and the page title."""
     mocker.patch("url_validation.is_safe_url", return_value="93.184.216.34")
-    mocker.patch("url_validation.is_safe_browsing_url", return_value="safe")
+    mocker.patch("url_validation.is_safe_browsing_url", return_value=SafeBrowsingStatus.SAFE)
     mock_response = mocker.Mock()
     mock_response.is_redirect = False
     mock_response.status_code = 200
@@ -53,7 +54,7 @@ def test_validate_url_returns_title(mocker):
 def test_validate_url_blocks_dangerous_url(mocker):
     """A URL flagged by Safe Browsing should return valid=False with reason 'dangerous'."""
     mocker.patch("url_validation.is_safe_url", return_value="1.2.3.4")
-    mocker.patch("url_validation.is_safe_browsing_url", return_value="dangerous")
+    mocker.patch("url_validation.is_safe_browsing_url", return_value=SafeBrowsingStatus.DANGEROUS)
 
     result = url_validation.validate_url_and_get_title("https://malware.example.com")
     assert result.valid is False
@@ -66,7 +67,7 @@ def test_validate_url_blocks_dangerous_url(mocker):
 def test_validate_url_server_error(mocker):
     """A URL that returns a 5xx response should fail validation."""
     mocker.patch("url_validation.is_safe_url", return_value="93.184.216.34")
-    mocker.patch("url_validation.is_safe_browsing_url", return_value="safe")
+    mocker.patch("url_validation.is_safe_browsing_url", return_value=SafeBrowsingStatus.SAFE)
     mock_response = mocker.Mock()
     mock_response.is_redirect = False
     mock_response.status_code = 500
