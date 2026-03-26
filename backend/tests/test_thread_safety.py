@@ -6,7 +6,7 @@ import tempfile
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import app
+import url_service
 from app import app as flask_app
 import db as db_module
 
@@ -62,9 +62,9 @@ def test_concurrent_shorten_unique_shortcodes():
             g.db = make_thread_conn(db_path)
             try:
                 while True:
-                    shortcode = app.generate_shortcode()
+                    shortcode = url_service._generate_shortcode()
                     try:
-                        app.save_url(url, shortcode, None, f"Example {index}")
+                        url_service._save_url(url, shortcode, None, f"Example {index}")
                         break
                     except sqlite3.IntegrityError:
                         continue
@@ -107,7 +107,7 @@ def test_concurrent_click_count_increments():
     with flask_app.app_context():
         from flask import g
         g.db = make_thread_conn(db_path)
-        app.save_url("https://click-test.com", "clk", None, "Click Test")
+        url_service._save_url("https://click-test.com", "clk", None, "Click Test")
         g.db.close()
 
     def do_increment():
@@ -115,7 +115,7 @@ def test_concurrent_click_count_increments():
             from flask import g
             g.db = make_thread_conn(db_path)
             try:
-                app.increment_click_count("clk")
+                url_service.record_click("clk")
             finally:
                 g.db.close()
 

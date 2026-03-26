@@ -4,25 +4,26 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.tests.fixtures import client, test_db
-import app
+import url_service
+from db import execute_query
 from url_validation import UrlCheckResult
 
 
 def test_generate_shortcode():
-    gen_shortcode = app.generate_shortcode()
+    gen_shortcode = url_service._generate_shortcode()
     assert len(gen_shortcode) == 5
     assert gen_shortcode.isalnum()
 
 
 def test_existing_shortcode(test_db):
-    app.execute_query("INSERT INTO urls (original_url, short_code) VALUES (?, ?)", ("http://example.com", "abc"))
-    result = app.execute_query("SELECT 1 FROM urls WHERE short_code = ?", ("abc",))
+    execute_query("INSERT INTO urls (original_url, short_code) VALUES (?, ?)", ("http://example.com", "abc"))
+    result = execute_query("SELECT 1 FROM urls WHERE short_code = ?", ("abc",))
     assert result is not None
 
 
 
 def test_shorten_url(client, mocker):
-    mocker.patch("app.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
+    mocker.patch("url_service.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
     response = client.post('/shorten', json={"url": "youtube.com"})
     assert response.status_code == 201
 
@@ -35,7 +36,7 @@ def test_shorten_url(client, mocker):
 
     assert short_url == f"http://localhost/{shortcode}"
 
-    result = app.execute_query("SELECT * FROM urls WHERE short_code = ?", (shortcode,))
+    result = execute_query("SELECT * FROM urls WHERE short_code = ?", (shortcode,))
     assert result is not None
 
     assert result["original_url"] == "https://youtube.com"
@@ -74,7 +75,7 @@ def test_logout_user(client):
 
 
 def test_redirect(client, mocker):
-    mocker.patch("app.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
+    mocker.patch("url_service.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
     shorten_response = client.post('/shorten', json={"url": "youtube.com"})
     short_url = shorten_response.get_json()["short_url"]
     shortcode = short_url.split("/")[-1]
@@ -104,7 +105,7 @@ def test_missing_url(client, test_db):
 
 
 def test_handle_user_redirect_success(client, test_db, mocker):
-    mocker.patch("app.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
+    mocker.patch("url_service.validate_url_and_get_title", return_value=UrlCheckResult(valid=True, title="YouTube", error_reason=None))
     client.post('/register', json={"email": "testuser@test.com", "password": "testpass"})
     client.post('/login', json={"email": "testuser@test.com", "password": "testpass"})
 
