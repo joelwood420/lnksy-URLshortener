@@ -25,9 +25,6 @@ from url_service import (
     qr_code_for,
 )
 
-# ---------------------------------------------------------------------------
-# Application bootstrap
-# ---------------------------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, '.env'))
@@ -38,7 +35,7 @@ STATIC_DIR = _docker_static if os.path.isdir(_docker_static) else _local_static
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 
-# --- Secret key validation ---------------------------------------------------
+
 app.secret_key = os.environ.get('SECRET_KEY')
 if not app.secret_key:
     raise RuntimeError("SECRET_KEY environment variable is not set. Add it to backend/.env")
@@ -202,7 +199,6 @@ def handle_redirect(shortcode):
     original_url = resolve(shortcode)
     if not original_url:
         return jsonify({"error": "Shortcode not found"}), 404
-    record_click(shortcode)
     return redirect(original_url)
 
 
