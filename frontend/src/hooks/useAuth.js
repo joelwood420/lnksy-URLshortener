@@ -1,4 +1,5 @@
 import { useSessionCheck } from './useSessionCheck'
+import { logout } from '../api'
 
 export function useAuth(setShowMyUrls, setShowLogin) {
     const { currentUser, setCurrentUser } = useSessionCheck()
@@ -19,10 +20,7 @@ export function useAuth(setShowMyUrls, setShowLogin) {
 
     const handleLogout = async () => {
         try {
-            await fetch('/logout', {
-                method: 'POST',
-                credentials: 'include'
-            })
+            await logout()
             setCurrentUser(null)
             setShowMyUrls(false)
         } catch (error) {

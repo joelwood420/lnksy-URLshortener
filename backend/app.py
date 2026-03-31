@@ -46,7 +46,7 @@ if len(app.secret_key) < 32:
         'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
-# --- Flask configuration -----------------------------------------------------
+# Flask configuration
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
@@ -54,7 +54,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['WTF_CSRF_TIME_LIMIT'] = None
 app.config['WTF_CSRF_HEADERS'] = ['X-CSRF-Token']
 
-# --- Security middleware ------------------------------------------------------
+# Security 
 Talisman(
     app,
     content_security_policy={
@@ -72,7 +72,7 @@ Talisman(
 limiter = Limiter(app, default_limits=["100 per day", "10 per minute"])
 csrf = CSRFProtect(app)
 
-# --- Database -----------------------------------------------------------------
+# Database 
 initialize_db()
 app.teardown_appcontext(close_db)
 
@@ -92,7 +92,7 @@ def render_react():
     return send_from_directory(app._static_folder, 'index.html')
 
 
-# --- Authentication ----------------------------------------------------------
+# Authentication
 
 @app.route('/register', methods=['POST'])
 @limiter.limit("3 per minute")
@@ -143,7 +143,7 @@ def logout():
     return jsonify({"message": "Logged out"}), 200
 
 
-# --- URL shortening -----------------------------------------------------------
+# --- URL shortening
 
 @app.route('/shorten', methods=['POST'])
 def shorten_url():
@@ -174,7 +174,7 @@ def shorten_url():
     return jsonify({"short_url": result.short_url, "qr_code": result.qr_code_base64}), status
 
 
-# --- Redirect & static -------------------------------------------------------
+# Redirect & static
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
@@ -202,7 +202,7 @@ def handle_redirect(shortcode):
     return redirect(original_url)
 
 
-# --- User URL management ------------------------------------------------------
+# User URL management
 
 @app.route('/my-urls', methods=['GET'])
 def my_urls():
